@@ -44,14 +44,13 @@ jobs:
           path: docker-images.tar
           retention-days: 1
 
-  test:
+  backend-test:
     needs: [build]
     runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v3
 
-      # Тестирование бэкенда
       - name: Настройка Python
         uses: actions/setup-python@v4
         with:
@@ -76,7 +75,20 @@ jobs:
           cd project/backend
           python -m pytest tests/test_database.py tests/test_minio_storage.py tests/test_model.py tests/test_video_processing.py --cov=app --cov-report=xml
 
-      # Тестирование фронтенда
+      - name: Загрузка отчета о покрытии бэкенда
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: project/backend/coverage.xml
+          if-no-files-found: warn
+
+  frontend-test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+
       - name: Настройка Node.js
         uses: actions/setup-node@v3
         with:
@@ -100,17 +112,15 @@ jobs:
           cd project/frontend
           npm test -- --coverage src/utils/axios.test.js --environment jsdom
           
-      - name: Загрузка отчетов о покрытии
+      - name: Загрузка отчета о покрытии фронтенда
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
-          path: |
-            project/backend/coverage.xml
-            project/frontend/coverage
+          name: frontend-coverage-report
+          path: project/frontend/coverage
           if-no-files-found: warn
 
   publish:
-    needs: [test]
+    needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
