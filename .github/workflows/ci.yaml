@@ -2,14 +2,16 @@ name: CI проекта
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, lab3]
   pull_request:
     branches: [main, dev]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    # Пропускаем этот job при пуше в ветку lab3
+    if: github.event_name != 'push' || github.ref != 'refs/heads/lab3'
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -46,7 +48,9 @@ jobs:
 
   backend-test:
     runs-on: ubuntu-latest
-
+    # Пропускаем этот job при пуше в ветку lab3
+    if: github.event_name != 'push' || github.ref != 'refs/heads/lab3'
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -83,7 +87,9 @@ jobs:
 
   frontend-test:
     runs-on: ubuntu-latest
-
+    # Пропускаем этот job при пуше в ветку lab3
+    if: github.event_name != 'push' || github.ref != 'refs/heads/lab3'
+    
     steps:
       - uses: actions/checkout@v3
 
@@ -120,8 +126,8 @@ jobs:
   # ЭТАП ПУБЛИКАЦИИ DOCKER-ОБРАЗОВ
   publish-docker-images:
     runs-on: ubuntu-latest
+    # Для ветки lab3 не требуется выполнение предыдущих этапов
     needs: [backend-test, frontend-test]
-    # Запускаем публикацию только при пуше в main или dev
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/lab3')
     
     steps:
@@ -148,10 +154,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: docker-images
+        # Пропускаем для ветки lab3, так как предыдущий этап не выполнялся
+        if: github.ref != 'refs/heads/lab3'
 
       - name: Загрузка образов в Docker
         run: |
           docker load -i docker-images.tar
+        # Пропускаем для ветки lab3, так как предыдущий этап не выполнялся
+        if: github.ref != 'refs/heads/lab3'
+      
+      - name: Сборка образов для lab3
+        if: github.ref == 'refs/heads/lab3'
+        run: |
+          # Для ветки lab3 собираем образы напрямую
+          cd project
+          docker compose build --no-cache
       
       - name: Извлечение метаданных (тегов, labels) для Backend
         id: meta-backend
