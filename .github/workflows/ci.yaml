@@ -2,9 +2,9 @@ name: CI проекта
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, lab3]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, lab3]
 
 jobs:
   build:
