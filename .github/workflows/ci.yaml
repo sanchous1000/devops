@@ -47,36 +47,6 @@ jobs:
   backend-test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      minio:
-        image: minio/minio
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-          - 9001:9001
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 3
-          --entrypoint "minio server /data --console-address :9001"
-
     steps:
       - uses: actions/checkout@v3
 
@@ -89,37 +59,21 @@ jobs:
       - name: Установка зависимостей
         run: |
           cd project/backend
-          pip install -r requirements.txt
-          pip install pytest pytest-cov
+          python -m pip install -r requirements.txt
+          # Устанавливаем pytest для запуска тестов
+          python -m pip install pytest pytest-cov
 
-      - name: Настройка переменных окружения
+      - name: Запуск упрощенных тестов backend
         run: |
-          cd project/backend
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_db" >> .env
-          echo "MINIO_ENDPOINT=localhost:9000" >> .env
-          echo "MINIO_ACCESS_KEY=minioadmin" >> .env
-          echo "MINIO_SECRET_KEY=minioadmin" >> .env
-          echo "MINIO_SECURE=False" >> .env
-          echo "BUCKET_NAME=videos" >> .env
-          echo "JWT_SECRET=test_secret" >> .env
-          echo "CORS_ORIGINS=http://localhost:5173" >> .env
-
-      - name: Создание бакета в Minio
-        run: |
-          pip install minio
-          python -c "from minio import Minio; client = Minio('localhost:9000', access_key='minioadmin', secret_key='minioadmin', secure=False); client.make_bucket('videos') if not client.bucket_exists('videos') else None"
-
-      - name: Запуск тестов backend
-        run: |
-          # Запускаем только стабильные тесты без зависимостей (согласно build.sh)
+          # Запускаем только стабильные тесты без зависимостей (как в build.sh)
           cd project/backend
           python -m pytest tests/test_database.py tests/test_minio_storage.py tests/test_model.py tests/test_video_processing.py -v || true
 
       - name: Генерация отчета о покрытии
         run: |
           cd project/backend
-          python -m pytest tests/test_database.py tests/test_minio_storage.py tests/test_model.py tests/test_video_processing.py --cov=app --cov-report=xml -o coverage.xml
-          
+          python -m pytest tests/test_database.py tests/test_minio_storage.py tests/test_model.py tests/test_video_processing.py --cov=app --cov-report=xml
+
       - name: Загрузка отчета о покрытии
         uses: actions/upload-artifact@v4
         with:
