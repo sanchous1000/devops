@@ -95,6 +95,7 @@ function test_backend() {
     echo "✅ Тесты backend завершены!"
 }
 
+
 function test_frontend() {
     echo "🧪 Запускаем тесты для frontend..."
     cd frontend
